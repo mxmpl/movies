@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "movies"
+description = "Build your own movie database"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Maxime Poli" }]
+dependencies = ["requests", "beautifulsoup4"]
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = { attr = "movies.__version__" }
+
+[project.scripts]
+movies = "movies.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "ipykernel",
+    "black",
+    "ruff",
+    "pre-commit",
+    "mypy",
+    "types-requests",
+    "types-beautifulsoup4",
+]
+notion = ["notion-client"]
+
+[tool.ruff]
+line-length = 119
+
+[tool.black]
+line-length = 119

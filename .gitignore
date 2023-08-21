@@ -1,0 +1,4 @@
+*.db
+*.egg-info
+*.code-workspace
+__pycache__

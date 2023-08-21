@@ -33,6 +33,10 @@ class Movie:
 
     def __post_init__(self):
         assert 0 <= self.rating <= 10
+        if not self.watched:
+            assert self.watched_date is None
+            assert not self.cinema
+            assert self.my_rating is None
         if self.my_rating is not None:
             assert 0 <= self.my_rating <= 10
 

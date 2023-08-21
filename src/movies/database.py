@@ -1,6 +1,5 @@
 import abc
 import dataclasses
-import datetime
 import sqlite3
 
 from movies.movie import Movie
@@ -47,14 +46,7 @@ class SQLiteDatabase(Database):
             return None
         if len(rows) != 1:
             raise ValueError(f"Multiple entries with IMDb id {imdb_id}")
-        movie = dict(zip(column_names, rows[0]))
-        if movie["genres"] is not None:
-            movie["genres"] = movie["genres"].split(", ")
-        if movie["watched_date"] is not None:
-            movie["watched_date"] = datetime.datetime.strptime(movie["watched_date"], "%Y-%m-%d").date()
-        movie["watched"] = bool(movie["watched"])
-        movie["cinema"] = bool(movie["cinema"])
-        return Movie(**movie)
+        return Movie.from_sqlite(dict(zip(column_names, rows[0])))
 
 
 @dataclasses.dataclass

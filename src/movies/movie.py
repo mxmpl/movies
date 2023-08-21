@@ -61,9 +61,19 @@ class Movie:
 
     @property
     def to_sqlite(self) -> tuple:
-        page_dict = dataclasses.asdict(self)
-        page_dict["genres"] = ", ".join(page_dict["genres"])
-        return tuple(page_dict.values())
+        movie_dict = dataclasses.asdict(self)
+        movie_dict["genres"] = ", ".join(movie_dict["genres"])
+        return tuple(movie_dict.values())
+
+    @classmethod
+    def from_sqlite(cls, movie_dict: dict) -> Self:
+        if movie_dict["genres"] is not None:
+            movie_dict["genres"] = movie_dict["genres"].split(", ")
+        if movie_dict["watched_date"] is not None:
+            movie_dict["watched_date"] = datetime.datetime.strptime(movie_dict["watched_date"], "%Y-%m-%d").date()
+        movie_dict["watched"] = bool(movie_dict["watched"])
+        movie_dict["cinema"] = bool(movie_dict["cinema"])
+        return cls(**movie_dict)
 
     @classmethod
     def from_imdb(cls, imdb_id: str) -> Self:

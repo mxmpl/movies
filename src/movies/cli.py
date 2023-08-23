@@ -39,7 +39,7 @@ def main() -> None:
     movie = Movie.from_imdb(args.imdb_id)
     movie.watched_date = None if args.date is None else datetime.datetime.strptime(args.date, "%Y-%m-%d").date()
     movie.cinema = args.cinema
-    movie.my_rating = args.rating
+    movie.rating = args.rating
     database: Database
     if args.database == "notion":
         database = NotionDatabase(args.auth, args.database_id)

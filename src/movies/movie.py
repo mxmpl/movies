@@ -2,7 +2,7 @@ import dataclasses
 import datetime
 import json
 import time
-from typing import Self
+from typing import Any, Self
 
 import requests
 from bs4 import BeautifulSoup
@@ -13,6 +13,14 @@ HEADERS = {
 }
 
 
+def _content_to_property(content: str) -> dict:
+    return {"type": "rich_text", "rich_text": [{"type": "text", "text": {"content": content}}]}
+
+
+def _property_to_content(property: dict) -> str:
+    return property["rich_text"][0]["plain_text"]
+
+
 @dataclasses.dataclass
 class Movie:
     imdb_id: str
@@ -21,43 +29,72 @@ class Movie:
     year: int | None
     duration_in_sec: int | None
     poster: str | None
-    rating: int
-    director: str | None
-    actors: str | None
-    genres: list[str] | None
-    my_rating: int | None = None
+    director: str
+    actors: str
+    genres: list[str]
+    rating: int | None = None
     watched: bool = False
     watched_date: datetime.date | None = None
     cinema: bool = False
-    comment: str | None = None
+    comment: str = ""
 
     def __post_init__(self):
-        assert 0 <= self.rating <= 10
         if not self.watched:
             assert self.watched_date is None
             assert not self.cinema
-            assert self.my_rating is None
-        if self.my_rating is not None:
-            assert 0 <= self.my_rating <= 10
+            assert self.rating is None
+        if self.rating is not None:
+            assert 0 <= self.rating <= 10
 
     @property
-    def to_notion(self) -> dict[str, str | int | list[str] | datetime.date | None]:
-        return {
-            "Title": self.title,
-            "IMDb id": self.imdb_id,
-            "Rating": self.my_rating,
-            "Watched": self.watched,
-            "Original title": self.original_title,
-            "Year": self.year,
-            "Duration": time.strftime("%-Hh%M", time.gmtime(self.duration_in_sec)),
-            "Genres": self.genres,
-            "Director": self.director,
-            "Actors": self.actors,
-            "IMDb rating": self.rating,
-            "Comment": self.comment,
-            "Watched date": self.watched_date,
-            "Cinema": self.cinema,
+    def to_notion(self) -> dict[str, Any]:
+        properties = {
+            "Title": {"type": "title", "title": [{"type": "text", "text": {"content": self.title}}]},
+            "IMDb id": _content_to_property(self.imdb_id),
+            "Rating": {"type": "number", "number": self.rating},
+            "Watched": {"type": "checkbox", "checkbox": self.watched},
+            "Original title": _content_to_property(self.original_title),
+            "Year": {"type": "number", "number": self.year},
+            "Duration": _content_to_property(time.strftime("%-Hh%M", time.gmtime(self.duration_in_sec))),
+            "Genres": {"type": "multi_select", "multi_select": [{"name": genre} for genre in self.genres]},
+            "Director": _content_to_property(self.director),
+            "Actors": _content_to_property(self.actors),
+            "Comment": _content_to_property(self.comment),
+            "Cinema": {"type": "checkbox", "checkbox": self.cinema},
         }
+        if self.watched_date is not None:
+            properties["Watched date"] = {"type": "date", "date": {"start": self.watched_date.strftime("%Y-%m-%d")}}
+        if self.poster is None:
+            return {"properties": properties}
+        return {"properties": properties, "cover": {"type": "external", "external": {"url": self.poster}}}
+
+    @classmethod
+    def from_notion(cls, entry: dict) -> Self:
+        poster = entry["cover"]["external"]["url"]
+        properties = entry["properties"]
+        hours, minutes = properties["Duration"]["rich_text"][0]["plain_text"].split("h")
+        duration_in_sec = int(hours) * 3600 + int(minutes) * 60
+        date = (
+            None
+            if properties["Watched date"]["date"] is None
+            else datetime.datetime.strptime(properties["Watched date"]["date"], "%Y-%m-%d").date()
+        )
+        return cls(
+            imdb_id=properties["IMDb id"]["title"][0]["text"]["content"],
+            title=_property_to_content(properties["Title"]),
+            original_title=_property_to_content(properties["Original title"]),
+            year=properties["Year"]["number"],
+            duration_in_sec=duration_in_sec,
+            poster=poster,
+            director=_property_to_content(properties["Director"]),
+            actors=_property_to_content(properties["Actors"]),
+            genres=[genre["name"] for genre in properties["Genres"]["multi_select"]],
+            rating=properties["Rating"]["number"],
+            watched=properties["Watched"]["checkbox"],
+            watched_date=date,
+            cinema=properties["Cinema"]["checkbox"],
+            comment=_property_to_content(properties["Comment"]),
+        )
 
     @property
     def to_sqlite(self) -> tuple:
@@ -85,15 +122,13 @@ class Movie:
         duration = None if data["runtime"] is None else data["runtime"]["seconds"]
         poster = None if data["primaryImage"] is None else data["primaryImage"]["url"]
         year = None if data["releaseYear"] is None else data["releaseYear"]["year"]
-        genres = None if data["genres"] is None else [genre["text"] for genre in data["genres"]["genres"]]
+        genres = [genre["text"] for genre in data["genres"]["genres"]]
 
-        credits = {}
-        for credit in data["principalCredits"]:
-            credits[credit["category"]["text"]] = ", ".join(
-                [name["name"]["nameText"]["text"] for name in credit["credits"]]
-            )
-        director = None if "Director" not in credits else credits["Director"]
-        actors = None if "Stars" not in credits else credits["Stars"]
+        creds = {}
+        for cred in data["principalCredits"]:
+            creds[cred["category"]["text"]] = ", ".join([name["name"]["nameText"]["text"] for name in cred["credits"]])
+        director = creds["Director"] if "Director" in creds else creds["Directors"] if "Directors" in creds else ""
+        actors = "" if "Stars" not in creds else creds["Stars"]
         return cls(
             imdb_id=imdb_id,
             title=data["titleText"]["text"],
@@ -101,7 +136,6 @@ class Movie:
             year=year,
             duration_in_sec=duration,
             poster=poster,
-            rating=data["ratingsSummary"]["aggregateRating"],
             director=director,
             actors=actors,
             genres=genres,

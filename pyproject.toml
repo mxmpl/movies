@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [{ name = "Maxime Poli" }]
-dependencies = ["requests", "beautifulsoup4"]
+dependencies = ["requests", "beautifulsoup4", "notion-client"]
 dynamic = ["version"]
 
 [tool.setuptools.dynamic]
@@ -28,7 +28,6 @@ dev = [
     "types-requests",
     "types-beautifulsoup4",
 ]
-notion = ["notion-client"]
 
 [tool.ruff]
 line-length = 119

@@ -49,8 +49,8 @@ class Movie:
     @property
     def to_notion(self) -> dict[str, Any]:
         properties = {
-            "Title": {"type": "title", "title": [{"type": "text", "text": {"content": self.title}}]},
-            "IMDb id": _content_to_property(self.imdb_id),
+            "IMDb id": {"type": "title", "title": [{"type": "text", "text": {"content": self.imdb_id}}]},
+            "Title": _content_to_property(self.title),
             "Rating": {"type": "number", "number": self.rating},
             "Watched": {"type": "checkbox", "checkbox": self.watched},
             "Original title": _content_to_property(self.original_title),
@@ -77,7 +77,7 @@ class Movie:
         date = (
             None
             if properties["Watched date"]["date"] is None
-            else datetime.datetime.strptime(properties["Watched date"]["date"], "%Y-%m-%d").date()
+            else datetime.datetime.strptime(properties["Watched date"]["date"]["start"], "%Y-%m-%d").date()
         )
         return cls(
             imdb_id=properties["IMDb id"]["title"][0]["text"]["content"],

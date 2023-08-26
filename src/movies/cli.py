@@ -1,22 +1,15 @@
 import argparse
 import datetime
-import os
-from enum import StrEnum
 
 from movies import version_long
 from movies.database import Database, NotionDatabase, SQLiteDatabase
 from movies.movie import Movie
 
 
-class NotionEnv(StrEnum):
-    AUTH = os.environ.get("NOTION_AUTH", "")
-    DATABASE = os.environ.get("NOTION_DATABASE", "")
-
-
 def parser_notion(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser("notion", description="add a movie to Notion database")
-    parser.add_argument("auth", type=str, help="authentication key")
-    parser.add_argument("database_id", type=str, help="database id")
+    parser.add_argument("--auth", type=str, help="authentication key")
+    parser.add_argument("--database_id", type=str, help="database id")
 
 
 def parser_sqlite(subparsers: argparse._SubParsersAction) -> None:
@@ -40,21 +33,14 @@ def parser_add(subparsers: argparse._SubParsersAction) -> None:
 
 def command_add(args: argparse.Namespace) -> None:
     movie = Movie.from_imdb(args.imdb_id)
-    movie.watched = args.watched or args.cinema is not None or args.date is not None or args.rating is not None
+    movie.watched = args.watched or args.cinema or (args.date is not None) or (args.rating is not None)
     if args.date is not None:
         movie.watched_date = datetime.datetime.strptime(args.date, "%Y-%m-%d").date()
     movie.cinema = args.cinema
     movie.rating = args.rating
     database: Database
     if args.database == "notion":
-        auth = args.auth if args.auth is not None else NotionEnv.AUTH
-        database_id = args.database_id if args.database_id is not None else NotionEnv.DATABASE
-        if not auth or not database_id:
-            raise ValueError(
-                "Invalid Notion environment: must set the Notion "
-                + "environment variables or provide both --auth and --database_id arguments"
-            )
-        database = NotionDatabase(auth, database_id)
+        database = NotionDatabase(args.auth, args.database_id)
     elif args.database == "sqlite":
         database = SQLiteDatabase(args.path)
     else:
@@ -70,14 +56,7 @@ def parser_fetch(subparsers: argparse._SubParsersAction) -> None:
 
 
 def command_fetch(args: argparse.Namespace) -> None:
-    auth = args.auth if args.auth is not None else NotionEnv.AUTH
-    database_id = args.database_id if args.database_id is not None else NotionEnv.DATABASE
-    if not auth or not database_id:
-        raise ValueError(
-            "Invalid Notion environment: must set the Notion "
-            + "environment variables or provide both --auth and --database_id arguments"
-        )
-    notion = NotionDatabase(auth, database_id)
+    notion = NotionDatabase(args.auth, args.database_id)
     movies = notion.fetchall()
     sqlite = SQLiteDatabase(args.path)
     sqlite.insert(movies)

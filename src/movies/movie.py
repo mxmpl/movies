@@ -26,7 +26,7 @@ class Movie:
     imdb_id: str
     title: str
     original_title: str
-    year: int | None
+    release_date: datetime.date | None
     duration_in_sec: int | None
     poster: str | None
     director: str
@@ -48,20 +48,22 @@ class Movie:
 
     @property
     def to_notion(self) -> dict[str, Any]:
+        duration = "" if self.duration_in_sec is None else time.strftime("%-Hh%M", time.gmtime(self.duration_in_sec))
         properties = {
             "IMDb id": {"type": "title", "title": [{"type": "text", "text": {"content": self.imdb_id}}]},
             "Title": _content_to_property(self.title),
             "Rating": {"type": "number", "number": self.rating},
             "Watched": {"type": "checkbox", "checkbox": self.watched},
             "Original title": _content_to_property(self.original_title),
-            "Year": {"type": "number", "number": self.year},
-            "Duration": _content_to_property(time.strftime("%-Hh%M", time.gmtime(self.duration_in_sec))),
+            "Duration": _content_to_property(duration),
             "Genres": {"type": "multi_select", "multi_select": [{"name": genre} for genre in self.genres]},
             "Director": _content_to_property(self.director),
             "Actors": _content_to_property(self.actors),
             "Comment": _content_to_property(self.comment),
             "Cinema": {"type": "checkbox", "checkbox": self.cinema},
         }
+        if self.release_date is not None:
+            properties["Release date"] = {"type": "date", "date": {"start": self.release_date.strftime("%Y-%m-%d")}}
         if self.watched_date is not None:
             properties["Watched date"] = {"type": "date", "date": {"start": self.watched_date.strftime("%Y-%m-%d")}}
         if self.poster is None:
@@ -72,18 +74,27 @@ class Movie:
     def from_notion(cls, entry: dict) -> Self:
         poster = entry["cover"]["external"]["url"]
         properties = entry["properties"]
-        hours, minutes = properties["Duration"]["rich_text"][0]["plain_text"].split("h")
-        duration_in_sec = int(hours) * 3600 + int(minutes) * 60
+        duration_split = properties["Duration"]["rich_text"][0]["plain_text"].split("h")
+        if duration_split != [""]:
+            hours, minutes = properties["Duration"]["rich_text"][0]["plain_text"].split("h")
+            duration_in_sec = int(hours) * 3600 + int(minutes) * 60
+        else:
+            duration_in_sec = None
         date = (
             None
             if properties["Watched date"]["date"] is None
             else datetime.datetime.strptime(properties["Watched date"]["date"]["start"], "%Y-%m-%d").date()
         )
+        release_date = (
+            None
+            if properties["Release date"]["date"] is None
+            else datetime.datetime.strptime(properties["Release date"]["date"]["start"], "%Y-%m-%d").date()
+        )
         return cls(
             imdb_id=properties["IMDb id"]["title"][0]["text"]["content"],
             title=_property_to_content(properties["Title"]),
             original_title=_property_to_content(properties["Original title"]),
-            year=properties["Year"]["number"],
+            release_date=release_date,
             duration_in_sec=duration_in_sec,
             poster=poster,
             director=_property_to_content(properties["Director"]),
@@ -108,6 +119,8 @@ class Movie:
             movie_dict["genres"] = movie_dict["genres"].split(", ")
         if movie_dict["watched_date"] is not None:
             movie_dict["watched_date"] = datetime.datetime.strptime(movie_dict["watched_date"], "%Y-%m-%d").date()
+        if movie_dict["release_date"] is not None:
+            movie_dict["release_date"] = datetime.datetime.strptime(movie_dict["release_date"], "%Y-%m-%d").date()
         movie_dict["watched"] = bool(movie_dict["watched"])
         movie_dict["cinema"] = bool(movie_dict["cinema"])
         return cls(**movie_dict)
@@ -121,7 +134,11 @@ class Movie:
         data = json.loads(soup.string)["props"]["pageProps"]["aboveTheFoldData"]  # type: ignore
         duration = None if data["runtime"] is None else data["runtime"]["seconds"]
         poster = None if data["primaryImage"] is None else data["primaryImage"]["url"]
-        year = None if data["releaseYear"] is None else data["releaseYear"]["year"]
+        release_date = (
+            None
+            if data["releaseDate"] is None
+            else datetime.date(data["releaseDate"]["year"], data["releaseDate"]["month"], data["releaseDate"]["day"])
+        )
         genres = [genre["text"] for genre in data["genres"]["genres"]]
 
         creds = {}
@@ -133,7 +150,7 @@ class Movie:
             imdb_id=imdb_id,
             title=data["titleText"]["text"],
             original_title=data["originalTitleText"]["text"],
-            year=year,
+            release_date=release_date,
             duration_in_sec=duration,
             poster=poster,
             director=director,

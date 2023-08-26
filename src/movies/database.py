@@ -1,5 +1,6 @@
 import abc
 import dataclasses
+import os
 import sqlite3
 
 from movies.movie import Movie
@@ -59,10 +60,19 @@ class SQLiteDatabase(Database):
 
 @dataclasses.dataclass
 class NotionDatabase(Database):
-    auth: str
-    database_id: str
+    auth: str | None = None
+    database_id: str | None = None
 
     def __post_init__(self):
+        if self.auth is None:
+            self.auth = os.environ.get("NOTION_AUTH", "")
+        if self.database_id is None:
+            self.database_id = os.environ.get("NOTION_DATABASE", "")
+        if not self.auth or not self.database_id:
+            raise ValueError(
+                "Invalid Notion environment: must set the Notion "
+                + "environment variables or provide both auth and database_id arguments"
+            )
         try:
             from notion_client import Client
         except ImportError as error:

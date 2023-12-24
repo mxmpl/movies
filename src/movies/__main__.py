@@ -10,7 +10,7 @@ def parser_add(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser("add", description="add a movie to a Notion database")
     parser.add_argument("imdb_id", type=str, help="IMDb identifier of the movie")
     parser.add_argument("--rating", type=int, help="your rating")
-    parser.add_argument("--watched", action="store_true")
+    parser.add_argument("--watched", action="store_true", help="whether you have seen it or not")
     parser.add_argument("--cinema", action="store_true", help="whether you have seen it at the theater or not")
     parser.add_argument(
         "--date",

@@ -1,8 +1,8 @@
 import datetime
 import textwrap
 
-from movies.database import NotionDatabase, SQLiteDatabase
-from movies.movie import Movie
+from .database import NotionDatabase, SQLiteDatabase
+from .movie import Movie
 
 __version__ = 1.0
 __all__ = ["Movie", "NotionDatabase", "SQLiteDatabase"]

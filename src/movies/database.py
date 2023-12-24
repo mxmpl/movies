@@ -3,7 +3,7 @@ import dataclasses
 import os
 import sqlite3
 
-from movies.movie import Movie
+from .movie import Movie
 
 
 @dataclasses.dataclass
@@ -60,23 +60,16 @@ class SQLiteDatabase(Database):
 
 @dataclasses.dataclass
 class NotionDatabase(Database):
-    auth: str | None = None
-    database_id: str | None = None
+    auth: str = dataclasses.field(default_factory=lambda: os.environ.get("NOTION_AUTH", ""))
+    database_id: str = dataclasses.field(default_factory=lambda: os.environ.get("NOTION_DATABASE", ""))
 
     def __post_init__(self):
-        if self.auth is None:
-            self.auth = os.environ.get("NOTION_AUTH", "")
-        if self.database_id is None:
-            self.database_id = os.environ.get("NOTION_DATABASE", "")
         if not self.auth or not self.database_id:
-            raise ValueError(
-                "Invalid Notion environment: must set the Notion "
-                + "environment variables or provide both auth and database_id arguments"
-            )
+            raise ValueError("Must set the NOTION_AUTH and NOTION_DATABASE environment variables")
         try:
             from notion_client import Client
         except ImportError as error:
-            raise ImportError("Install notion_client with `pip install notion-client` to use NotionWriter") from error
+            raise ImportError("Install notion_client with `pip install notion-client`.") from error
         self._client = Client(auth=self.auth)
 
     def insert(self, movies: Movie | list[Movie]) -> None:

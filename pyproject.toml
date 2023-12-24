@@ -16,12 +16,11 @@ dynamic = ["version"]
 version = { attr = "movies.__version__" }
 
 [project.scripts]
-movies = "movies.cli:main"
+movies = "movies.__main__:main"
 
 [project.optional-dependencies]
 dev = [
     "ipykernel",
-    "black",
     "ruff",
     "pre-commit",
     "mypy",
@@ -30,7 +29,4 @@ dev = [
 ]
 
 [tool.ruff]
-line-length = 119
-
-[tool.black]
 line-length = 119

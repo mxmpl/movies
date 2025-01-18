@@ -1,32 +1,36 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "movies"
+version = "1.0"
 description = "Build your own movie database"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = { file = "LICENSE" }
 authors = [{ name = "Maxime Poli" }]
-dependencies = ["requests", "beautifulsoup4", "notion-client"]
-dynamic = ["version"]
-
-[tool.setuptools.dynamic]
-version = { attr = "movies.__version__" }
+dependencies = [
+    "beautifulsoup4>=4.12.3",
+    "notion-client>=2.3.0",
+    "requests>=2.32.3",
+]
 
 [project.scripts]
 movies = "movies.__main__:main"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "ipykernel",
-    "ruff",
-    "pre-commit",
-    "mypy",
-    "types-requests",
-    "types-beautifulsoup4",
+    "ipykernel>=6.29.5",
+    "mypy>=1.14.1",
+    "pre-commit>=4.0.1",
+    "ruff>=0.9.2",
+    "types-beautifulsoup4>=4.12.0.20241020",
+    "types-requests>=2.32.0.20241016",
 ]
 
 [tool.ruff]
 line-length = 119
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

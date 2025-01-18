@@ -29,7 +29,7 @@ class SQLiteDatabase(Database):
         self._connection = sqlite3.connect(self.path)
         self._cursor = self._connection.cursor()
         fields = Movie.__dataclass_fields__.keys()
-        self._insert_cmd = f"INSERT INTO movies VALUES({', '.join(['?']*len(fields))})"
+        self._insert_cmd = f"INSERT INTO movies VALUES({', '.join(['?'] * len(fields))})"
         table_names = self._cursor.execute("SELECT name FROM sqlite_master").fetchone()
         if table_names is None or "movies" not in table_names:
             self._cursor.execute(f"CREATE TABLE movies({', '.join(fields)})")

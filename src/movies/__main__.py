@@ -1,7 +1,7 @@
 import argparse
 import datetime
+from importlib.metadata import version
 
-from . import version_long
 from .database import NotionDatabase, SQLiteDatabase
 from .movie import Movie
 
@@ -30,9 +30,7 @@ def main() -> None:
         + "or fetch a Notion database to a SQLite database",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument(
-        "-V", "--version", action="version", version=version_long(), help="display version and copyright information"
-    )
+    parser.add_argument("-V", "--version", action="version", version=version("movies"), help="display version")
     subparsers = parser.add_subparsers(title="command", help="available commands", dest="command")
     parser_add(subparsers)
     parser_fetch(subparsers)
